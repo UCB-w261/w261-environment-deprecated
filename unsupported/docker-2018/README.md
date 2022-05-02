@@ -19,20 +19,54 @@ Using Docker we can keep a fresh deployment of our Hadoop/Jupyter/Spark environm
 
 Download Docker Community Edition from [Docker](https://docs.docker.com/engine/installation/ "Docker Install Documentation")
 
+## Pull the Class Image
+
+```
+docker pull w261/w261-environment
+```
+
 ## Things to know
 
-We will use `docker-compose` to deploy our container with the proper configuration of user ownership, volume mounts, etc.
+In the container for W261 we use docker-compose to build our container. Below is a potentially out of date example. Use the one in your class repo.
 
-- version: this item says use v3 syntax
+```
+version: '3'
+services:
+  quickstart.cloudera:
+    image: w261/w261-environment:latest
+    hostname: docker.w261
+    privileged: true
+    command: bash -c "/root/start-notebook.sh;/usr/bin/docker-quickstart"
+    ports:
+      - "8887:8888"   # Hue server
+      - "8889:8889"   # jupyter
+      - "10020:10020" # mapreduce job history server
+      - "8022:22"     # ssh
+      - "7180:7180"   # Cloudera Manager
+      - "11000:11000" # Oozie
+      - "50070:50070" # HDFS REST Namenode
+      - "50075:50075" # hdfs REST Datanode
+      - "8088:8088"   # yarn resource manager webapp address
+      - "19888:19888" # mapreduce job history webapp address
+      - "8983:8983"   # Solr console
+      - "8032:8032"   # yarn resource manager access
+      - "8042:8042"   # yarn node manager
+      - "60010:60010" # hbase
+      - "4040:4040"   # Spark UI
+      - "8080:8080"   # Hadoop Job Tracker
+    tty: true
+    stdin_open: true
+    volumes: 
+      - .:/media/notebooks
+```
+
+- version: this item says use v2 syntax
 - services: list of containers
-  - spark: the name of a container, the label being spark
+  - quickstart.cloudera: the name of a container, the label being quickstart.cloudera
     - image: use this base container
     - hostname: DNS name for the container
     - privledged: allow access to other machines such as the local machine
-    - user: root user privileges
-    - environment:
-      - values to not conflict ownership of files both inside and outisde the container
-    - commands: runs this commands on start
+    - commands: run this commands on start
     - ports: map ports so that services running on the container are accessible from the local computer
       - remote port:local port
     - tty: allow a shell to be initiated
@@ -40,46 +74,7 @@ We will use `docker-compose` to deploy our container with the proper configurati
     - volumes: location to map from local computer to the docker container so they can share. 
       - /local/path:/media/notebook
 
-```
-version: '3'
-services:
-  spark:
-    image: jupyter/pyspark-notebook
-    hostname: docker.w261
-    privileged: true
-    user: root
-    environment:
-      - NB_USER=$USER
-      - CHOWN_HOME=yes
-      - GRANT_SUDO=yes
-      - NB_UID=$ID
-      - NB_GID=$GID
-    command: bash -c "start.sh jupyter lab --ServerApp.token='' --ServerApp.authenticate_prometheus=False --ServerApp.port=8889"
-    ports:
-      - "8889:8889"
-      - "4040:4040"
-    tty: true
-    stdin_open: true
-    volumes:
-      - .:/home/$USER
-```
-
-[This only apply to linux-based systems]
-If you are planning to use this locally, copy the yaml text from above into `temp-docker.yaml`, then inject the environment variables with the following commands:
-
-```
-#IF YOU DON'T HAVE UID OR GID ENV VARS, RUN THIS COMMAND. SKIP OTHERWISE.
-export $(id | cut -d ' ' -f 1,2 | sed -e 's/([^()]*)//g' | tr '[:lower:]' '[:upper:]')
-
-eval "echo \"$(sed 's/"/\\"/g' temp-docker.yaml)\"" > docker-compose.yaml
-
-#SAFELY REMOVE TEMP YAML
-rm temp-docker.yaml
-```
-
-## NOTE: For all notebooks related to Hadoop, please follow this instructions to create a Dataproc cluster.
-
-[Create a Dataproc cluster](https://github.com/UCB-w261/w261-environment/create-dataproc-cluster/README.md)]
+If we review the bash scripts `startup.sh` we can see that the jupyter notebook is launched from the `/media/notebook` directory. This is very important for our deployment.
 
 ## How to Use
 
